@@ -1,0 +1,310 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>Homeowner Dashboard</h2>
+        <p class="text-muted">System Status: <span class="badge bg-success">{{ system_status }}</span></p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="card bg-light">
+            <div class="card-body py-2">
+                <h5 class="mb-0">Estimated Bill</h5>
+                <h3 class="text-primary">${{ total_cost }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if alerts %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <h5><i class="bi bi-exclamation-triangle"></i> Recent Alerts</h5>
+            <ul class="mb-0">
+                {% for alert in alerts %}
+                <li>{{ alert.message }} <small class="text-muted">({{ alert.created_at|timesince }} ago)</small></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Graphs Section -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                Daily Energy Consumption (kWh)
+            </div>
+            <div class="card-body">
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                Appliance Usage Breakdown (kWh)
+            </div>
+            <div class="card-body">
+                <canvas id="breakdownChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Appliances Section -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                Fault Reports
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="badge bg-danger me-2">Pending: {{ unresolved_faults }}</span>
+                    <span class="badge bg-success">Resolved: {{ resolved_faults }}</span>
+                </div>
+                <ul class="list-group">
+                    {% for fault in fault_reports|slice:":5" %}
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <div><strong>{{ fault.appliance.name }}</strong></div>
+                            <div class="small text-muted">{{ fault.reported_at|date:"M d, H:i" }}</div>
+                        </div>
+                        <span class="badge rounded-pill {% if fault.is_resolved %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if fault.is_resolved %}Resolved{% else %}Pending{% endif %}
+                        </span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center">No fault reports yet.</li>
+                    {% endfor %}
+                </ul>
+                {% if fault_reports|length > 5 %}
+                <div class="mt-3 text-end">
+                    <small>Showing latest 5 reports</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>My Appliances</span>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                    data-bs-target="#addApplianceModal">
+                    Add Appliance
+                </button>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Power (kW)</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in appliances %}
+                        <tr>
+                            <td>{{ app.name }}</td>
+                            <td>{{ app.appliance_type }}</td>
+                            <td>{{ app.power_rating }}</td>
+                            <td>
+                                {% if app.is_on %}
+                                <span class="badge bg-success">ON</span>
+                                {% else %}
+                                <span class="badge bg-secondary">OFF</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'toggle_appliance' app.id %}"
+                                    class="btn btn-sm {% if app.is_on %}btn-danger{% else %}btn-success{% endif %}">
+                                    Turn {% if app.is_on %}Off{% else %}On{% endif %}
+                                </a>
+
+                                <button type="button" class="btn btn-sm btn-outline-info"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#scheduleModal{{ app.id }}">
+                                    Schedule
+                                </button>
+
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#faultModal{{ app.id }}">
+                                    Report Fault
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No appliances added yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% for app in appliances %}
+                <!-- Schedule Modal for {{ app.name }} -->
+                <div class="modal fade" id="scheduleModal{{ app.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="{% url 'schedule_appliance' %}" method="post">
+                                {% csrf_token %}
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Schedule {{ app.name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="appliance_id" value="{{ app.id }}">
+                                    <div class="mb-3">
+                                        <label>Action</label>
+                                        <select name="action" class="form-select">
+                                            <option value="ON">Turn On</option>
+                                            <option value="OFF">Turn Off</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label>Time</label>
+                                        <input type="datetime-local" name="scheduled_time" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Save Schedule</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fault Modal for {{ app.name }} -->
+                <div class="modal fade" id="faultModal{{ app.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="{% url 'report_fault' %}" method="post">
+                                {% csrf_token %}
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Report Fault for {{ app.name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="appliance_id" value="{{ app.id }}">
+                                    <div class="mb-3">
+                                        <label>Description</label>
+                                        <textarea name="description" class="form-control" required></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Report Fault</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Appliance Modal -->
+<div class="modal fade" id="addApplianceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{% url 'add_appliance' %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Appliance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Appliance Name</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g., Living Room AC">
+                    </div>
+                    <div class="mb-3">
+                        <label>Type</label>
+                        <select name="appliance_type" class="form-select">
+                            <option value="AC">Air Conditioner</option>
+                            <option value="Heater">Heater</option>
+                            <option value="Light">Light</option>
+                            <option value="Fridge">Refrigerator</option>
+                            <option value="Washing Machine">Washing Machine</option>
+                        </select>
+                        <small class="text-muted">Power rating will be set automatically based on type via Factory
+                            Pattern.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Daily Consumption Bar Chart
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ daily_labels|safe }},
+            datasets: [{
+                label: 'Energy (kWh)',
+                data: {{ daily_data|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Appliance Usage Breakdown Pie Chart
+    const breakdownCtx = document.getElementById('breakdownChart').getContext('2d');
+    new Chart(breakdownCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ appliance_labels|safe }},
+            datasets: [{
+                data: {{ appliance_data|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(153, 102, 255, 0.6)',
+                    'rgba(255, 159, 64, 0.6)',
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(255, 206, 86, 0.6)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

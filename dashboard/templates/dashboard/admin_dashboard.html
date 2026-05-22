@@ -1,0 +1,144 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>Admin Dashboard</h2>
+        <p class="text-muted">Manage system users and monitor global metrics.</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="card bg-success text-white">
+            <div class="card-body py-2">
+                <h5 class="mb-0">Total System Load</h5>
+                <h3>{{ total_system_usage }} kWh</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Homeowners Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Homeowners</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Pricing Plan</th>
+                            <th>Appliances</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for homeowner in homeowners %}
+                        <tr>
+                            <td>{{ homeowner.username }}</td>
+                            <td>{{ homeowner.email }}</td>
+                            <td>
+                                <span class="badge bg-info text-dark">
+                                    {{ homeowner.profile.pricing_plan }}
+                                </span>
+                            </td>
+                            <td>{{ homeowner.appliances.count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No homeowners registered.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technicians Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">Technicians</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Assigned Faults</th>
+                            <th>Resolved Faults</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for technician in technicians %}
+                        <tr>
+                            <td>{{ technician.username }}</td>
+                            <td>{{ technician.email }}</td>
+                            <td>
+                                {{ technician.assigned_faults_count }}
+                            </td>
+                            <td>
+                                {{ technician.resolved_faults_count }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No technicians registered.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                System Faults & Maintenance History
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Device</th>
+                            <th>Homeowner</th>
+                            <th>Fault Description</th>
+                            <th>Status</th>
+                            <th>Technician</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fault in all_faults %}
+                        <tr>
+                            <td>{{ fault.appliance.name }}</td>
+                            <td>{{ fault.appliance.homeowner.username }}</td>
+                            <td>{{ fault.description }}</td>
+                            <td>
+                                {% if fault.is_resolved %}
+                                    <span class="badge bg-success">Resolved</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if fault.assignment %}
+                                    {{ fault.assignment.technician.username }}
+                                {% else %}
+                                    <span class="text-muted">Unassigned</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

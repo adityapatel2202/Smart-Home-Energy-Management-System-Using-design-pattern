@@ -1,0 +1,137 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>Technician Dashboard</h2>
+        <p class="text-muted">Manage appliance faults and maintenance assignments.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Assigned Faults -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                My Assigned Faults
+            </div>
+            <div class="card-body">
+                {% if assigned_faults %}
+                <div class="list-group">
+                    {% for assignment in assigned_faults %}
+                        {% if assignment.fault %}
+                        {% with fault=assignment.fault %}
+                        <div class="list-group-item">
+                            <h5 class="mb-1">{{ fault.appliance.name }} ({{ fault.appliance.appliance_type }})</h5>
+                            <p class="mb-1 text-danger"><strong>Issue:</strong> {{ fault.description }}</p>
+                            <small>Reported: {{ fault.reported_at|date:"M d, Y H:i" }}</small>
+                            <form method="POST" action="{% url 'resolve_fault' fault.id %}" class="mt-2">
+                                {% csrf_token %}
+                                <div class="input-group input-group-sm">
+                                    <input type="text" name="notes" class="form-control" placeholder="Resolution notes..." required>
+                                    <button class="btn btn-success" type="submit">Mark Resolved</button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endwith %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No pending assignments.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Unassigned/System Faults -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                System-wide Faults (Unassigned)
+            </div>
+            <div class="card-body">
+                {% if unassigned_faults %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Issue</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fault in unassigned_faults %}
+                            <tr>
+                                <td>{{ fault.appliance.name }}</td>
+                                <td>{{ fault.description }}</td>
+                                <td>
+                                    <form method="POST" action="{% url 'assign_fault' fault.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Assign to me</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No unassigned faults detected.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resolved Faults History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                Recently Resolved Faults
+            </div>
+            <div class="card-body">
+                {% if resolved_faults %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Issue</th>
+                                <th>Reported</th>
+                                <th>Resolved</th>
+                                <th>Resolution Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in resolved_faults %}
+                            {% with fault=assignment.fault %}
+                            <tr>
+                                <td>{{ fault.appliance.name }} ({{ fault.appliance.appliance_type }})</td>
+                                <td>{{ fault.description }}</td>
+                                <td>{{ fault.reported_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    {% if assignment.resolution_notes %}
+                                    <small class="text-muted">{{ assignment.resolution_notes }}</small>
+                                    {% else %}
+                                    <small class="text-muted">No notes provided</small>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-success">Resolved</span></td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No resolved faults yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

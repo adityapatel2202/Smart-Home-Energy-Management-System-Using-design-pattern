@@ -1,0 +1,78 @@
+{% extends 'dashboard/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card mt-5">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Register for SHEMS</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Username Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.username.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.email.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">{{ form.password1.label }}</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.password1.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Confirm Password Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">{{ form.password2.label }}</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.password2.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div class="mb-3">
+                        <label for="{{ form.role.id_for_label }}" class="form-label">{{ form.role.label }}</label>
+                        {{ form.role }}
+                        {% if form.role.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.role.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mt-3">Register</button>
+                </form>
+                <hr>
+                <p class="text-center">Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
