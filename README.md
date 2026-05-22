@@ -9,13 +9,3 @@
 - Core design patterns required by the assignment
 - Simple energy usage and fault management flow
 
-# Credentials
-
-## admin
-
-user : admin
-password : admin123
-
-## homeowner and technician
-
-you can create your self.
